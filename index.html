@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Tiles - Enhanced Price Calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        .tile-card {
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+        .tile-card.selected {
+            border-color: #3B82F6;
+            background-color: #EBF4FF;
+        }
+        .tile-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        .room-preview {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border-radius: 8px;
+            position: relative;
+            min-height: 250px;
+            overflow: hidden;
+        }
+        .tile-preview {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            background-repeat: repeat;
+            background-size: 50px 50px;
+            border-radius: 4px;
+            opacity: 0.8;
+        }
+        .design-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+        .design-slide {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .design-slide.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .lang-toggle {
+            display: flex;
+            background: rgba(255,255,255,0.2);
+            border-radius: 25px;
+            overflow: hidden;
+        }
+        .lang-option {
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.8);
+        }
+        .lang-option.active {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            font-weight: 600;
+        }
+        .design-preview-large {
+            height: 200px;
+            background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">SMART TILES</h1>
+                <p class="text-blue-100">Price Calculator</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <i class="fas fa-globe mr-2"></i>
+                <div class="lang-toggle">
+                    <div class="lang-option active" id="langEn" onclick="setLanguage('en')">English</div>
+                    <div class="lang-option" id="langSw" onclick="setLanguage('sw')">Kiswahili</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto p-4 max-w-5xl">
+        <!-- Step 1: Tile Selection -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800" data-en="Select Tile Size/Category" data-sw="Chagua Ukubwa/Aina ya Vigae">Select Tile Size/Category</h2>
+            
+            <select id="tileCategory" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+                <option value="60x60">60x60 cm - Tsh 8,000/tile</option>
+                <option value="40x40">40x40 cm - Tsh 3,000/tile</option>
+                <option value="25x40">25x40 cm - Tsh 2,000/tile</option>
+                <option value="30x30">30x30 cm - Tsh 2,000/tile</option>
+                <option value="80x10">80x10 cm - Tsh 3,000/tile</option>
+            </select>
+
+            <div id="tileDesigns">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800" data-en="Choose Your Design" data-sw="Chagua Muundo Wako">Choose Your Design</h3>
+                
+                <div class="design-container bg-gray-50 p-6 rounded-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <button id="prevDesign" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition duration-300 shadow-lg">
+                            <i class="fas fa-chevron-left text-lg"></i>
+                        </button>
+                        <div class="text-center">
+                            <span id="designIndicator" class="text-gray-600 font-medium">1 / 15</span>
+                            <p class="text-sm text-gray-500 mt-1" data-en="Navigate through designs" data-sw="Tembelea miongoni mwa miundo">Navigate through designs</p>
+                        </div>
+                        <button id="nextDesign" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition duration-300 shadow-lg">
+                            <i class="fas fa-chevron-right text-lg"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="designDisplay">
+                        <!-- Individual design slides will be generated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="selectedTileInfo" class="hidden mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 class="font-semibold text-blue-800 mb-2" data-en="Selected Tile Information" data-sw="Taarifa za Vigae Vilivyochaguliwa">Selected Tile Information</h4>
+                <div id="tileDetails"></div>
+            </div>
+        </div>
+
+        <!-- Step 2: Room Preview -->
+        <div id="roomPreviewSection" class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800" data-en="Room Preview" data-sw="Muonekano wa Chumba">Room Preview</h2>
+            <div class="room-preview">
+                <div id="tilePreview" class="tile-preview"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="bg-white bg-opacity-90 p-4 rounded-lg text-center shadow-lg">
+                        <i class="fas fa-home text-4xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-600" data-en="Your selected tile in room" data-sw="Vigae vyako vilivyochaguliwa chumbani">Your selected tile in room</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Area Calculation -->
+        <div id="calculationSection" class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800" data-en="Calculate Your Price" data-sw="Kokotoa Bei Yako">Calculate Your Price</h2>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-2" data-en="Enter area in square meters" data-sw="Ingiza eneo kwa mita za mraba">Enter area in square meters</label>
+                <input type="number" id="roomArea" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="23" min="0.1" step="0.1">
+                <p class="text-sm text-gray-500 mt-1" data-en="Example: 4 x 3 = 12 sqm" data-sw="Mfano: 4 x 3 = 12 sqm">Example: 4 x 3 = 12 sqm</p>
+            </div>
+
+            <button id="calculateBtn" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                <i class="fas fa-calculator mr-2"></i>
+                <span data-en="Calculate Price" data-sw="Kokotoa Bei">Calculate Price</span>
+            </button>
+        </div>
+
+        <!-- Step 4: Results & Order -->
+        <div id="resultsSection" class="bg-white rounded-lg shadow-md p-6 hidden">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800" data-en="Your Order Summary" data-sw="Muhtasari wa Agizo Lako">Your Order Summary</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <p class="text-gray-600" data-en="Price per tile:" data-sw="Bei kwa kigae:">Price per tile:</p>
+                    <p id="pricePerTile" class="text-xl font-semibold text-blue-600">Tsh 0</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <p class="text-gray-600" data-en="Total tiles needed:" data-sw="Jumla ya vigae vinavyohitajika:">Total tiles needed:</p>
+                    <p id="totalTiles" class="text-xl font-semibold">0</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <p class="text-gray-600" data-en="Total boxes:" data-sw="Jumla ya masanduku:">Total boxes:</p>
+                    <p id="totalBoxes" class="text-xl font-semibold">0</p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p class="text-blue-600 font-medium" data-en="Total Price:" data-sw="Bei Jumla:">Total Price:</p>
+                    <p id="totalPrice" class="text-2xl font-bold text-blue-600">Tsh 0</p>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <p class="text-lg font-medium mb-4" data-en="Ready to Order?" data-sw="Tayari Kuagiza?">Ready to Order?</p>
+                
+                <button id="whatsappBtn" class="w-full bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 transition duration-300 mb-3">
+                    <i class="fab fa-whatsapp mr-2"></i>
+                    <span data-en="Order Now via WhatsApp" data-sw="Agiza Sasa kupitia WhatsApp">Order Now via WhatsApp</span>
+                </button>
+                
+                <p class="text-gray-600 mb-2" data-en="Or call:" data-sw="Au piga simu:">Or call:</p>
+                <a href="tel:+255716002790" class="inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                    <i class="fas fa-phone mr-2"></i>
+                    +255 716 00 27 90
+                </a>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+            <details class="cursor-pointer">
+                <summary class="font-semibold text-gray-800 mb-2" data-en="Need Help Measuring?" data-sw="Unahitaji Msaada wa Kupima?">Need Help Measuring?</summary>
+                <div class="text-gray-600 mt-2">
+                    <p data-en="• Measure length and width of your room" data-sw="• Pima urefu na upana wa chumba chako">• Measure length and width of your room</p>
+                    <p data-en="• Multiply length × width = area in square meters" data-sw="• Zidisha urefu × upana = eneo kwa mita za mraba">• Multiply length × width = area in square meters</p>
+                    <p data-en="• Add 10% extra for cutting and waste" data-sw="• Ongeza 10% zaidi kwa kukata na upotevu">• Add 10% extra for cutting and waste</p>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-4 mt-8">
+        <div class="container mx-auto text-center">
+            <p data-en="For delivery, installation or advice – contact us anytime." data-sw="Kwa utoaji, usakinishaji au ushauri – wasiliana nasi wakati wowote.">For delivery, installation or advice – contact us anytime.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Tile data
+        const tileData = {
+            '60x60': {
+                size: '60x60 cm',
+                price: 8000,
+                tilesPerBox: 4,
+                boxCoverage: 1.44,
+                tileArea: 0.36,
+                designs: [
+                    {name: 'Marble White', code: '601T', desc: 'Premium quality marble finish', usage: 'Living Room, Kitchen', features: 'Glossy, Stain-resistant'},
+                    {name: 'Wood Black', code: '602T', desc: 'Natural wood finish', usage: 'Living Room, Bedroom', features: 'Matte, Anti-slip'},
+                    {name: 'Stone Grey', code: '603T', desc: 'Natural stone texture', usage: 'Bathroom, Kitchen', features: 'Non-slip, Water-resistant'},
+                    {name: 'Ceramic Blue', code: '604T', desc: 'Modern ceramic design', usage: 'Bathroom, Pool', features: 'Waterproof, Easy clean'},
+                    {name: 'Granite Dark', code: '605T', desc: 'Luxury granite pattern', usage: 'Kitchen, Dining', features: 'Durable, Heat-resistant'},
+                    {name: 'Travertine Beige', code: '606T', desc: 'Classic travertine look', usage: 'Living Room, Hall', features: 'Elegant, Long-lasting'},
+                    {name: 'Porcelain White', code: '607T', desc: 'Pure porcelain finish', usage: 'Bathroom, Kitchen', features: 'Hygienic, Scratch-resistant'},
+                    {name: 'Limestone Cream', code: '608T', desc: 'Natural limestone texture', usage: 'Bedroom, Study', features: 'Soft, Comfortable'},
+                    {name: 'Slate Black', code: '609T', desc: 'Premium slate appearance', usage: 'Bathroom, Balcony', features: 'Non-slip, Weather-resistant'},
+                    {name: 'Marble Green', code: '610T', desc: 'Elegant green marble', usage: 'Living Room, Office', features: 'Sophisticated, Durable'},
+                    {name: 'Terrazzo Mix', code: '611T', desc: 'Modern terrazzo pattern', usage: 'Kitchen, Dining', features: 'Trendy, Easy-maintain'},
+                    {name: 'Quartz White', code: '612T', desc: 'Sparkling quartz finish', usage: 'Bathroom, Kitchen', features: 'Brilliant, Stain-proof'},
+                    {name: 'Sandstone Tan', code: '613T', desc: 'Warm sandstone look', usage: 'Living Room, Patio', features: 'Natural, Slip-resistant'},
+                    {name: 'Onyx Black', code: '614T', desc: 'Luxurious onyx pattern', usage: 'Feature Wall, Hall', features: 'Premium, Eye-catching'},
+                    {name: 'Concrete Grey', code: '615T', desc: 'Industrial concrete style', usage: 'Modern Spaces, Loft', features: 'Contemporary, Strong'}
+                ]
+            },
+            '40x40': {
+                size: '40x40 cm',
+                price: 3000,
+                tilesPerBox: 12,
+                boxCoverage: 1.92,
+                tileArea: 0.16,
+                designs: [
+                    {name: 'Classic White', code: '401T', desc: 'Timeless white ceramic', usage: 'Bathroom, Kitchen', features: 'Clean, Versatile'},
+                    {name: 'Mosaic Blue', code: '402T', desc: 'Beautiful mosaic pattern', usage: 'Bathroom, Pool', features: 'Decorative, Water-safe'},
+                    {name: 'Terra Cotta', code: '403T', desc: 'Rustic terra cotta finish', usage: 'Garden, Patio', features: 'Natural, Weather-proof'},
+                    {name: 'Diamond Pattern', code: '404T', desc: 'Geometric diamond design', usage: 'Feature Wall, Kitchen', features: 'Modern, Eye-catching'},
+                    {name: 'Hexagon Grey', code: '405T', desc: 'Trendy hexagonal shape', usage: 'Bathroom, Modern spaces', features: 'Unique, Stylish'},
+                    {name: 'Brick Red', code: '406T', desc: 'Traditional brick look', usage: 'Living Room, Study', features: 'Warm, Cozy'},
+                    {name: 'Ocean Blue', code: '407T', desc: 'Deep ocean blue shade', usage: 'Bathroom, Pool area', features: 'Calming, Water-themed'},
+                    {name: 'Forest Green', code: '408T', desc: 'Natural forest green', usage: 'Garden, Balcony', features: 'Refreshing, Natural'},
+                    {name: 'Sunset Orange', code: '409T', desc: 'Warm sunset colors', usage: 'Accent walls, Patio', features: 'Vibrant, Energizing'},
+                    {name: 'Pearl White', code: '410T', desc: 'Lustrous pearl finish', usage: 'Bathroom, Powder room', features: 'Elegant, Shimmering'},
+                    {name: 'Charcoal Black', code: '411T', desc: 'Deep charcoal tone', usage: 'Modern bathroom, Kitchen', features: 'Dramatic, Sophisticated'},
+                    {name: 'Sand Beige', code: '412T', desc: 'Neutral sand color', usage: 'Living areas, Bedroom', features: 'Neutral, Calming'},
+                    {name: 'Rose Gold', code: '413T', desc: 'Trendy rose gold metallic', usage: 'Feature wall, Accent', features: 'Luxurious, Trendy'},
+                    {name: 'Mint Green', code: '414T', desc: 'Fresh mint shade', usage: 'Bathroom, Kitchen', features: 'Fresh, Clean'},
+                    {name: 'Navy Blue', code: '415T', desc: 'Classic navy blue', usage: 'Bathroom, Study', features: 'Classic, Timeless'}
+                ]
+            },
+            '25x40': {
+                size: '25x40 cm',
+                price: 2000,
+                tilesPerBox: 15,
+                boxCoverage: 1.5,
+                tileArea: 0.1,
+                designs: [
+                    {name: 'Subway White', code: '251T', desc: 'Classic subway tile', usage: 'Kitchen, Bathroom', features: 'Timeless, Easy-clean'},
+                    {name: 'Metro Black', code: '252T', desc: 'Modern black subway', usage: 'Kitchen backsplash', features: 'Contemporary, Sleek'},
+                    {name: 'Beveled Edge', code: '253T', desc: 'Elegant beveled edges', usage: 'Feature wall, Kitchen', features: 'Dimensional, Elegant'},
+                    {name: 'Crackle Glaze', code: '254T', desc: 'Vintage crackle finish', usage: 'Bathroom, Accent wall', features: 'Vintage, Character'},
+                    {name: 'Glossy Turquoise', code: '255T', desc: 'Bright turquoise glaze', usage: 'Bathroom, Pool', features: 'Bright, Water-safe'},
+                    {name: 'Matte Sage', code: '256T', desc: 'Soft sage green matte', usage: 'Kitchen, Bathroom', features: 'Calming, Modern'},
+                    {name: 'Copper Metallic', code: '257T', desc: 'Metallic copper finish', usage: 'Feature wall, Bar', features: 'Metallic, Striking'},
+                    {name: 'Ivory Cream', code: '258T', desc: 'Warm ivory tone', usage: 'Kitchen, Living areas', features: 'Warm, Inviting'},
+                    {name: 'Cobalt Blue', code: '259T', desc: 'Rich cobalt blue', usage: 'Bathroom, Accent', features: 'Bold, Vibrant'},
+                    {name: 'Ash Grey', code: '260T', desc: 'Modern ash grey', usage: 'Contemporary spaces', features: 'Neutral, Sophisticated'},
+                    {name: 'Lime Green', code: '261T', desc: 'Fresh lime green', usage: 'Kitchen, Modern bath', features: 'Fresh, Energetic'},
+                    {name: 'Burgundy Red', code: '262T', desc: 'Deep burgundy shade', usage: 'Dining, Wine cellar', features: 'Rich, Elegant'},
+                    {name: 'Silver Metallic', code: '263T', desc: 'Sleek silver finish', usage: 'Modern kitchen, Bath', features: 'Modern, Reflective'},
+                    {name: 'Chocolate Brown', code: '264T', desc: 'Rich chocolate tone', usage: 'Kitchen, Study', features: 'Warm, Cozy'},
+                    {name: 'Lavender Purple', code: '265T', desc: 'Soft lavender hue', usage: 'Bathroom, Bedroom', features: 'Soft, Relaxing'}
+                ]
+            },
+            '30x30': {
+                size: '30x30 cm',
+                price: 2000,
+                tilesPerBox: 17,
+                boxCoverage: 1.53,
+                tileArea: 0.09,
+                designs: [
+                    {name: 'Checkerboard BW', code: '301T', desc: 'Classic black and white', usage: 'Kitchen, Retro spaces', features: 'Classic, Timeless'},
+                    {name: 'Floral Pattern', code: '302T', desc: 'Delicate floral design', usage: 'Bathroom, Powder room', features: 'Decorative, Feminine'},
+                    {name: 'Geometric Hex', code: '303T', desc: 'Modern hexagonal pattern', usage: 'Feature wall, Modern bath', features: 'Geometric, Trendy'},
+                    {name: 'Moroccan Blue', code: '304T', desc: 'Traditional Moroccan style', usage: 'Bathroom, Accent wall', features: 'Exotic, Decorative'},
+                    {name: 'Wood Plank Look', code: '305T', desc: 'Natural wood appearance', usage: 'Living room, Bedroom', features: 'Natural, Warm'},
+                    {name: 'Marble Veined', code: '306T', desc: 'Realistic marble veining', usage: 'Bathroom, Kitchen', features: 'Luxurious, Realistic'},
+                    {name: 'Penny Round', code: '307T', desc: 'Small penny round pattern', usage: 'Bathroom floor, Shower', features: 'Unique, Slip-resistant'},
+                    {name: 'Aztec Pattern', code: '308T', desc: 'Bold Aztec design', usage: 'Feature wall, Patio', features: 'Bold, Cultural'},
+                    {name: 'Damask Grey', code: '309T', desc: 'Elegant damask pattern', usage: 'Feature wall, Dining', features: 'Elegant, Sophisticated'},
+                    {name: 'Tropical Leaf', code: '310T', desc: 'Tropical leaf motif', usage: 'Bathroom, Garden room', features: 'Natural, Tropical'},
+                    {name: 'Art Deco Gold', code: '311T', desc: 'Glamorous Art Deco style', usage: 'Feature wall, Powder room', features: 'Glamorous, Vintage'},
+                    {name: 'Celtic Knot', code: '312T', desc: 'Intricate Celtic design', usage: 'Study, Traditional spaces', features: 'Traditional, Detailed'},
+                    {name: 'Basketweave', code: '313T', desc: 'Woven basket pattern', usage: 'Kitchen, Country style', features: 'Textured, Country'},
+                    {name: 'Starburst White', code: '314T', desc: 'Radiating star pattern', usage: 'Feature wall, Modern', features: 'Dynamic, Modern'},
+                    {name: 'Peacock Feather', code: '315T', desc: 'Colorful peacock design', usage: 'Accent wall, Artistic', features: 'Colorful, Artistic'}
+                ]
+            },
+            '80x10': {
+                size: '80x10 cm',
+                price: 3000,
+                tilesPerBox: 20,
+                boxCoverage: 1.6,
+                tileArea: 0.08,
+                designs: [
+                    {name: 'Wood Plank Oak', code: '801T', desc: 'Natural oak wood look', usage: 'Living room, Bedroom', features: 'Natural, Warm'},
+                    {name: 'Wood Plank Pine', code: '802T', desc: 'Light pine wood finish', usage: 'Bedroom, Study', features: 'Light, Airy'},
+                    {name: 'Wood Plank Walnut', code: '803T', desc: 'Rich walnut appearance', usage: 'Dining, Living room', features: 'Rich, Elegant'},
+                    {name: 'Bamboo Natural', code: '804T', desc: 'Eco-friendly bamboo look', usage: 'Modern spaces, Eco-homes', features: 'Sustainable, Modern'},
+                    {name: 'Driftwood Grey', code: '805T', desc: 'Weathered driftwood style', usage: 'Coastal, Rustic spaces', features: 'Rustic, Coastal'},
+                    {name: 'Teak Brown', code: '806T', desc: 'Premium teak wood look', usage: 'Luxury spaces, Deck', features: 'Premium, Durable'},
+                    {name: 'Ash White', code: '807T', desc: 'Light ash wood tone', usage: 'Scandinavian, Modern', features: 'Light, Scandinavian'},
+                    {name: 'Cherry Red', code: '808T', desc: 'Rich cherry wood color', usage: 'Traditional, Formal', features: 'Rich, Traditional'},
+                    {name: 'Mahogany Dark', code: '809T', desc: 'Deep mahogany shade', usage: 'Formal, Traditional', features: 'Dark, Formal'},
+                    {name: 'Birch Light', code: '810T', desc: 'Light birch wood look', usage: 'Contemporary, Clean', features: 'Light, Clean'},
+                    {name: 'Reclaimed Wood', code: '811T', desc: 'Rustic reclaimed style', usage: 'Industrial, Rustic', features: 'Rustic, Character'},
+                    {name: 'Ebony Black', code: '812T', desc: 'Dramatic ebony wood', usage: 'Modern, Dramatic', features: 'Dramatic, Modern'},
+                    {name: 'Maple Honey', code: '813T', desc: 'Warm honey maple', usage: 'Kitchen, Dining', features: 'Warm, Inviting'},
+                    {name: 'Cedar Natural', code: '814T', desc: 'Natural cedar appearance', usage: 'Outdoor, Rustic', features: 'Natural, Weather-resistant'},
+                    {name: 'Hickory Smoke', code: '815T', desc: 'Smoky hickory finish', usage: 'Rustic, Country', features: 'Smoky, Country'}
+                ]
+            }
+        };
+
+        // Language translations
+        const translations = {
+            en: {
+                'Select Tile Size/Category': 'Select Tile Size/Category',
+                'Choose Your Design': 'Choose Your Design',
+                'Navigate through designs': 'Navigate through designs',
+                'Selected Tile Information': 'Selected Tile Information',
+                'Room Preview': 'Room Preview',
+                'Your selected tile in room': 'Your selected tile in room',
+                'Calculate Your Price': 'Calculate Your Price',
+                'Enter area in square meters': 'Enter area in square meters',
+                'Example: 4 x 3 = 12 sqm': 'Example: 4 x 3 = 12 sqm',
+                'Calculate Price': 'Calculate Price',
+                'Your Order Summary': 'Your Order Summary',
+                'Price per tile:': 'Price per tile:',
+                'Total tiles needed:': 'Total tiles needed:',
+                'Total boxes:': 'Total boxes:',
+                'Total Price:': 'Total Price:',
+                'Ready to Order?': 'Ready to Order?',
+                'Order Now via WhatsApp': 'Order Now via WhatsApp',
+                'Or call:': 'Or call:',
+                'Need Help Measuring?': 'Need Help Measuring?',
+                '• Measure length and width of your room': '• Measure length and width of your room',
+                '• Multiply length × width = area in square meters': '• Multiply length × width = area in square meters',
+                '• Add 10% extra for cutting and waste': '• Add 10% extra for cutting and waste',
+                'For delivery, installation or advice – contact us anytime.': 'For delivery, installation or advice – contact us anytime.'
+            },
+            sw: {
+                'Select Tile Size/Category': 'Chagua Ukubwa/Aina ya Vigae',
+                'Choose Your Design': 'Chagua Muundo Wako',
+                'Navigate through designs': 'Tembelea miongoni mwa miundo',
+                'Selected Tile Information': 'Taarifa za Vigae Vilivyochaguliwa',
+                'Room Preview': 'Muonekano wa Chumba',
+                'Your selected tile in room': 'Vigae vyako vilivyochaguliwa chumbani',
+                'Calculate Your Price': 'Kokotoa Bei Yako',
+                'Enter area in square meters': 'Ingiza eneo kwa mita za mraba',
+                'Example: 4 x 3 = 12 sqm': 'Mfano: 4 x 3 = 12 sqm',
+                'Calculate Price': 'Kokotoa Bei',
+                'Your Order Summary': 'Muhtasari wa Agizo Lako',
+                'Price per tile:': 'Bei kwa kigae:',
+                'Total tiles needed:': 'Jumla ya vigae vinavyohitajika:',
+                'Total boxes:': 'Jumla ya masanduku:',
+                'Total Price:': 'Bei Jumla:',
+                'Ready to Order?': 'Tayari Kuagiza?',
+                'Order Now via WhatsApp': 'Agiza Sasa kupitia WhatsApp',
+                'Or call:': 'Au piga simu:',
+                'Need Help Measuring?': 'Unahitaji Msaada wa Kupima?',
+                '• Measure length and width of your room': '• Pima urefu na upana wa chumba chako',
+                '• Multiply length × width = area in square meters': '• Zidisha urefu × upana = eneo kwa mita za mraba',
+                '• Add 10% extra for cutting and waste': '• Ongeza 10% zaidi kwa kukata na upotevu',
+                'For delivery, installation or advice – contact us anytime.': 'Kwa utoaji, usakinishaji au ushauri – wasiliana nasi wakati wowote.'
+            }
+        };
+
+        // Global variables
+        let currentLanguage = 'en';
+        let selectedTile = null;
+        let selectedDesign = null;
+        let currentDesignIndex = 0;
+        let currentCategory = '60x60';
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            initializeEventListeners();
+            // Set default tile category and load first design
+            selectedTile = tileData['60x60'];
+            currentCategory = '60x60';
+            document.getElementById('tileCategory').value = '60x60';
+            showTileDesigns();
+            selectDesignByIndex(0); // Select first design by default
+        }
+
+        function initializeEventListeners() {
+            // Tile category selection
+            document.getElementById('tileCategory').addEventListener('change', handleCategoryChange);
+            
+            // Design navigation
+            document.getElementById('prevDesign').addEventListener('click', () => navigateDesign(-1));
+            document.getElementById('nextDesign').addEventListener('click', () => navigateDesign(1));
+            
+            // Calculate button
+            document.getElementById('calculateBtn').addEventListener('click', calculatePrice);
+            
+            // WhatsApp button
+            document.getElementById('whatsappBtn').addEventListener('click', sendWhatsAppMessage);
+            
+            // Room area input
+            document.getElementById('roomArea').addEventListener('input', updateRoomPreview);
+        }
+
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            
+            // Update language toggle UI
+            document.getElementById('langEn').classList.toggle('active', lang === 'en');
+            document.getElementById('langSw').classList.toggle('active', lang === 'sw');
+            
+            updateLanguageText();
+        }
+
+        function updateLanguageText() {
+            const elements = document.querySelectorAll('[data-en]');
+            elements.forEach(element => {
+                const key = element.getAttribute('data-en');
+                element.textContent = translations[currentLanguage][key] || key;
+            });
+        }
+
+        function handleCategoryChange() {
+            const category = document.getElementById('tileCategory').value;
+            currentCategory = category;
+            selectedTile = tileData[category];
+            currentDesignIndex = 0;
+            showTileDesigns();
+            selectDesignByIndex(0);
+        }
+
+        function showTileDesigns() {
+            const designs = selectedTile.designs;
+            const displayDiv = document.getElementById('designDisplay');
+            
+            // Create individual design slides
+            const slidesHTML = designs.map((design, index) => `
+                <div class="design-slide ${index === 0 ? 'active' : ''}" id="design-${index}">
+                    <div class="tile-card bg-white border-2 rounded-xl p-6 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300" 
+                         onclick="selectDesignByIndex(${index})">
+                        <div class="design-preview-large">
+                            <i class="fas fa-th-large text-6xl text-gray-500"></i>
+                        </div>
+                        <div class="text-center">
+                            <h4 class="font-bold text-xl mb-2 text-gray-800">${design.name}</h4>
+                            <p class="text-lg text-blue-600 font-semibold mb-3">Code: ${design.code}</p>
+                            <p class="text-gray-600 mb-4 leading-relaxed">${design.desc}</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                <div class="bg-green-50 p-3 rounded-lg">
+                                    <p class="text-green-700 font-medium mb-1">
+                                        <i class="fas fa-home mr-2"></i>Perfect for:
+                                    </p>
+                                    <p class="text-green-600">${design.usage}</p>
+                                </div>
+                                <div class="bg-blue-50 p-3 rounded-lg">
+                                    <p class="text-blue-700 font-medium mb-1">
+                                        <i class="fas fa-star mr-2"></i>Features:
+                                    </p>
+                                    <p class="text-blue-600">${design.features}</p>
+                                </div>
+                            </div>
+                            <button class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-300">
+                                <i class="fas fa-check mr-2"></i>Select This Design
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            displayDiv.innerHTML = slidesHTML;
+            
+            // Update design indicator
+            updateDesignIndicator();
+        }
+
+        function navigateDesign(direction) {
+            const totalDesigns = selectedTile.designs.length;
+            
+            // Hide current design
+            document.getElementById(`design-${currentDesignIndex}`).classList.remove('active');
+            
+            // Calculate new index
+            currentDesignIndex += direction;
+            if (currentDesignIndex < 0) currentDesignIndex = totalDesigns - 1;
+            if (currentDesignIndex >= totalDesigns) currentDesignIndex = 0;
+            
+            // Show new design
+            document.getElementById(`design-${currentDesignIndex}`).classList.add('active');
+            
+            updateDesignIndicator();
+        }
+
+        function updateDesignIndicator() {
+            const totalDesigns = selectedTile.designs.length;
+            document.getElementById('designIndicator').textContent = `${currentDesignIndex + 1} / ${totalDesigns}`;
+        }
+
+        function selectDesignByIndex(index) {
+            // Update current design index
+            currentDesignIndex = index;
+            
+            // Hide all designs
+            document.querySelectorAll('.design-slide').forEach(slide => {
+                slide.classList.remove('active');
+            });
+            
+            // Show selected design
+            document.getElementById(`design-${index}`).classList.add('active');
+            
+            // Update selected design data
+            selectedDesign = selectedTile.designs[index];
+            
+            // Update UI
+            updateDesignIndicator();
+            showSelectedTileInfo();
+            updateRoomPreview();
+            
+            // Add visual feedback
+            const selectedCard = document.querySelector(`#design-${index} .tile-card`);
+            selectedCard.classList.add('selected');
+            
+            // Remove selection from other cards after a delay
+            setTimeout(() => {
+                document.querySelectorAll('.tile-card').forEach(card => {
+                    if (card !== selectedCard) {
+                        card.classList.remove('selected');
+                    }
+                });
+            }, 100);
+        }
+
+        function showSelectedTileInfo() {
+            const infoDiv = document.getElementById('selectedTileInfo');
+            const detailsDiv = document.getElementById('tileDetails');
+            
+            detailsDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h5 class="font-semibold text-lg text-blue-800">${selectedDesign.name} - ${selectedDesign.code}</h5>
+                        <p class="text-sm text-gray-600 mb-2">${selectedDesign.desc}</p>
+                        <p class="text-sm"><i class="fas fa-ruler mr-2 text-blue-600"></i><strong>Size:</strong> ${selectedTile.size}</p>
+                        <p class="text-sm"><i class="fas fa-home mr-2 text-green-600"></i><strong>Usage:</strong> ${selectedDesign.usage}</p>
+                        <p class="text-sm"><i class="fas fa-star mr-2 text-yellow-600"></i><strong>Features:</strong> ${selectedDesign.features}</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h6 class="font-semibold mb-3 text-gray-800">Box Information</h6>
+                        <p class="text-sm mb-1"><strong>Tiles per Box:</strong> ${selectedTile.tilesPerBox}</p>
+                        <p class="text-sm mb-1"><strong>Box Coverage:</strong> ${selectedTile.boxCoverage} sqm</p>
+                        <p class="text-sm"><strong>Price per Tile:</strong> <span class="text-blue-600 font-semibold">Tsh ${selectedTile.price.toLocaleString()}</span></p>
+                    </div>
+                </div>
+            `;
+            
+            infoDiv.classList.remove('hidden');
+        }
+
+        function updateRoomPreview() {
+            if (!selectedDesign) return;
+            
+            const preview = document.getElementById('tilePreview');
+            // Create a simple pattern based on tile type
+            const patterns = {
+                'Wood Plank': 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="10" viewBox="0 0 80 10"><rect width="80" height="10" fill="%23D4A574"/><rect width="80" height="2" y="8" fill="%23C19660"/></svg>',
+                'Marble': 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="60" height="60" fill="%23F8F8FF"/><path d="M0,0 Q30,30 60,0 Q30,30 0,60" fill="%23E6E6FA" opacity="0.5"/></svg>',
+                'Wood': 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23DEB887"/><rect width="40" height="8" y="32" fill="%23D2B48C"/></svg>',
+                'Stone': 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"><rect width="30" height="30" fill="%23A9A9A9"/><circle cx="15" cy="15" r="3" fill="%23808080" opacity="0.3"/></svg>',
+                'default': 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="25" height="40" viewBox="0 0 25 40"><rect width="25" height="40" fill="%23E0E0E0"/><rect width="25" height="2" y="38" fill="%23D0D0D0"/></svg>'
+            };
+            
+            let pattern = patterns.default;
+            if (selectedDesign.name.includes('Wood')) pattern = patterns.Wood;
+            else if (selectedDesign.name.includes('Marble')) pattern = patterns.Marble;
+            else if (selectedDesign.name.includes('Stone')) pattern = patterns.Stone;
+            else if (currentCategory === '80x10') pattern = patterns['Wood Plank'];
+            
+            preview.style.backgroundImage = `url("${pattern}")`;
+        }
+
+        function calculatePrice() {
+            const area = parseFloat(document.getElementById('roomArea').value);
+            
+            if (!area || area <= 0) {
+                alert('Please enter a valid area in square meters');
+                return;
+            }
+            
+            if (!selectedTile || !selectedDesign) {
+                alert('Please select a tile design first');
+                return;
+            }
+            
+            // Calculate tiles needed
+            const tilesNeeded = Math.ceil(area / selectedTile.tileArea);
+            
+            // Calculate boxes needed (rounded up)
+            const boxesNeeded = Math.ceil(tilesNeeded / selectedTile.tilesPerBox);
+            
+            // Calculate total price
+            const totalPrice = tilesNeeded * selectedTile.price;
+            
+            // Display results
+            document.getElementById('pricePerTile').textContent = `Tsh ${selectedTile.price.toLocaleString()}`;
+            document.getElementById('totalTiles').textContent = tilesNeeded.toLocaleString();
+            document.getElementById('totalBoxes').textContent = boxesNeeded.toLocaleString();
+            document.getElementById('totalPrice').textContent = `Tsh ${totalPrice.toLocaleString()}`;
+            
+            // Show results section
+            document.getElementById('resultsSection').classList.remove('hidden');
+            
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function sendWhatsAppMessage() {
+            if (!selectedTile || !selectedDesign) {
+                alert('Please select a tile design first');
+                return;
+            }
+            
+            const area = document.getElementById('roomArea').value;
+            const tilesNeeded = Math.ceil(area / selectedTile.tileArea);
+            const boxesNeeded = Math.ceil(tilesNeeded / selectedTile.tilesPerBox);
+            const totalPrice = tilesNeeded * selectedTile.price;
+            
+            const message = `Hello! I want to order tiles from Smart Tiles:
+
+📐 *Tile Details:*
+- Design: ${selectedDesign.name} (${selectedDesign.code})
+- Size: ${selectedTile.size}
+- Usage: ${selectedDesign.usage}
+
+🏠 *Project Details:*
+- Room Area: ${area} sqm
+- Tiles Needed: ${tilesNeeded} pieces
+- Boxes Needed: ${boxesNeeded} boxes
+- Total Price: Tsh ${totalPrice.toLocaleString()}
+
+Please confirm availability and delivery options. Thank you!`;
+            
+            const whatsappUrl = `https://wa.me/255716002790?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+    </script>
+</body>
+</html>
